@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>The Last Village</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+
+    <div id="start-overlay" class="overlay">
+      <div class="panel">
+        <h1>The Last Village</h1>
+        <ul>
+          <li><strong>WASD</strong> — move</li>
+          <li><strong>Mouse</strong> — aim</li>
+          <li><strong>Hold left click</strong> — shoot</li>
+          <li><strong>Click</strong> a tower spot, tower, the core, or the forge to build / upgrade / repair</li>
+          <li>Survive <strong>10 minutes</strong> without the town core's HP hitting 0</li>
+        </ul>
+        <p class="prompt">Click or press any key to start</p>
+      </div>
+    </div>
+
+    <div id="win-overlay" class="overlay hidden">
+      <div class="panel win">
+        <h1>Victory!</h1>
+        <p>The village survived the siege.</p>
+        <p id="win-stats"></p>
+        <button id="restart-from-win">Play Again</button>
+      </div>
+    </div>
+
+    <div id="lose-overlay" class="overlay hidden">
+      <div class="panel lose">
+        <h1>The Village Has Fallen</h1>
+        <p id="lose-stats"></p>
+        <button id="restart-from-lose">Play Again</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="src/constants.js"></script>
+  <script src="src/utils.js"></script>
+  <script src="src/particles.js"></script>
+  <script src="src/input.js"></script>
+  <script src="src/entities.js"></script>
+  <script src="src/spawner.js"></script>
+  <script src="src/renderer.js"></script>
+  <script src="src/game.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>
