@@ -20,7 +20,7 @@ function trySpend(game, cost, effect) {
 
 class Player {
   constructor() {
-    this.pos = { x: CONFIG.CORE.pos.x, y: CONFIG.CORE.pos.y - 60 };
+    this.pos = { x: CONFIG.CORE.pos.x, y: CONFIG.CORE.pos.y - 90 };
     this.radius = CONFIG.PLAYER.radius;
     this.weaponLevel = 1;
     this.fireCooldown = 0;
@@ -51,28 +51,15 @@ class Player {
         speed: CONFIG.PLAYER.bulletSpeed,
         damage: this.damage,
         radius: CONFIG.PLAYER.bulletRadius,
-        color: '#ffe066',
+        spriteName: 'projectilePlayer',
       }));
       spawnMuzzleFlash(game, this.pos, this.aimAngle, this.radius + 6, '#fff6c0');
     }
   }
 
   draw(ctx) {
-    ctx.save();
     drawShadow(ctx, this.pos.x, this.pos.y, this.radius);
-    ctx.fillStyle = radialFill(ctx, this.pos.x, this.pos.y, this.radius, '#3aa6ff');
-    ctx.beginPath();
-    ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
-    ctx.fill();
-
-    // aim indicator
-    ctx.strokeStyle = '#0d3a5c';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(this.pos.x, this.pos.y);
-    ctx.lineTo(this.pos.x + Math.cos(this.aimAngle) * (this.radius + 12), this.pos.y + Math.sin(this.aimAngle) * (this.radius + 12));
-    ctx.stroke();
-    ctx.restore();
+    drawSprite(ctx, ASSETS.player, this.pos.x, this.pos.y, CONFIG.SPRITE_SIZE.player, this.aimAngle);
   }
 }
 
@@ -83,6 +70,7 @@ class Enemy {
     this.pos = pos;
     this.radius = cfg.radius;
     this.color = cfg.color;
+    this.sprite = cfg.sprite;
     this.maxHp = cfg.hp * scale.hp;
     this.hp = this.maxHp;
     this.speed = cfg.speed;
@@ -91,6 +79,7 @@ class Enemy {
     this.goldDrop = cfg.goldDrop * scale.gold;
     this.attackCooldown = 0;
     this.flashTimer = 0;
+    this.facingLeft = false;
     this.dead = false;
   }
 
@@ -102,6 +91,7 @@ class Enemy {
     const minDist = this.radius + core.radius;
     if (d > minDist) {
       const ang = angleTo(this.pos, core.pos);
+      this.facingLeft = Math.cos(ang) < 0;
       this.pos.x += Math.cos(ang) * this.speed * dt;
       this.pos.y += Math.sin(ang) * this.speed * dt;
     } else {
@@ -127,21 +117,22 @@ class Enemy {
   }
 
   draw(ctx) {
-    ctx.save();
     drawShadow(ctx, this.pos.x, this.pos.y, this.radius);
-    ctx.fillStyle = radialFill(ctx, this.pos.x, this.pos.y, this.radius, this.color);
-    ctx.beginPath();
-    ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
-    ctx.fill();
 
+    ctx.save();
     if (this.flashTimer > 0) {
-      ctx.globalAlpha = this.flashTimer / CONFIG.FX.hitFlashDuration;
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
+      const t = this.flashTimer / CONFIG.FX.hitFlashDuration;
+      ctx.filter = `brightness(${1 + t * 3})`;
     }
+    if (this.facingLeft) {
+      // mirror in place rather than rotate: this art is a forward-facing pose,
+      // not a side profile, so only left/right facing reads correctly.
+      ctx.translate(this.pos.x, this.pos.y);
+      ctx.scale(-1, 1);
+      ctx.translate(-this.pos.x, -this.pos.y);
+    }
+    drawSprite(ctx, ASSETS[this.sprite], this.pos.x, this.pos.y, CONFIG.SPRITE_SIZE[this.sprite]);
+    ctx.restore();
 
     // hp bar
     const w = this.radius * 2;
@@ -152,18 +143,18 @@ class Enemy {
     ctx.fillRect(barX, barY, w, h);
     ctx.fillStyle = '#e0453a';
     ctx.fillRect(barX, barY, w * clamp(this.hp / this.maxHp, 0, 1), h);
-    ctx.restore();
   }
 }
 
 class Projectile {
-  constructor({ pos, angle, speed, damage, radius, color }) {
+  constructor({ pos, angle, speed, damage, radius, spriteName }) {
     this.pos = { x: pos.x, y: pos.y };
+    this.angle = angle;
     this.vx = Math.cos(angle) * speed;
     this.vy = Math.sin(angle) * speed;
     this.damage = damage;
     this.radius = radius;
-    this.color = color;
+    this.spriteName = spriteName;
     this.life = 2; // seconds before auto-despawn
     this.dead = false;
   }
@@ -179,12 +170,7 @@ class Projectile {
   }
 
   draw(ctx) {
-    ctx.save();
-    ctx.fillStyle = this.color;
-    ctx.beginPath();
-    ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    drawSprite(ctx, ASSETS[this.spriteName], this.pos.x, this.pos.y, CONFIG.SPRITE_SIZE[this.spriteName], this.angle);
   }
 }
 
@@ -206,16 +192,8 @@ class GoldPickup {
   }
 
   draw(ctx) {
-    ctx.save();
     drawShadow(ctx, this.pos.x, this.pos.y, this.radius);
-    ctx.fillStyle = radialFill(ctx, this.pos.x, this.pos.y, this.radius, '#ffd54a');
-    ctx.strokeStyle = '#a3790a';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
+    drawSprite(ctx, ASSETS.goldCoin, this.pos.x, this.pos.y, CONFIG.SPRITE_SIZE.goldCoin);
   }
 }
 
@@ -224,6 +202,7 @@ class Tower {
     this.pos = pos;
     this.level = 1;
     this.fireCooldown = 0;
+    this.aimAngle = 0;
   }
 
   get damage() {
@@ -251,42 +230,38 @@ class Tower {
       }
     }
 
-    if (nearest && this.fireCooldown <= 0) {
-      this.fireCooldown = 1 / this.fireRate;
-      const ang = angleTo(this.pos, nearest.pos);
-      game.projectiles.push(new Projectile({
-        pos: { x: this.pos.x, y: this.pos.y },
-        angle: ang,
-        speed: CONFIG.TOWER.bulletSpeed,
-        damage: this.damage,
-        radius: CONFIG.TOWER.bulletRadius,
-        color: '#8be36b',
-      }));
-      spawnMuzzleFlash(game, this.pos, ang, CONFIG.TOWER.radius, '#c8f0b0');
+    if (nearest) {
+      this.aimAngle = angleTo(this.pos, nearest.pos);
+      if (this.fireCooldown <= 0) {
+        this.fireCooldown = 1 / this.fireRate;
+        game.projectiles.push(new Projectile({
+          pos: { x: this.pos.x, y: this.pos.y },
+          angle: this.aimAngle,
+          speed: CONFIG.TOWER.bulletSpeed,
+          damage: this.damage,
+          radius: CONFIG.TOWER.bulletRadius,
+          spriteName: 'projectileTower',
+        }));
+        spawnMuzzleFlash(game, this.pos, this.aimAngle, CONFIG.TOWER.radius, '#c8f0b0');
+      }
     }
   }
 
   draw(ctx) {
-    ctx.save();
     const r = CONFIG.TOWER.radius;
     drawShadow(ctx, this.pos.x, this.pos.y, r);
-    ctx.fillStyle = radialFill(ctx, this.pos.x, this.pos.y, r, '#7d8b99');
-    ctx.strokeStyle = '#3a434c';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.rect(this.pos.x - r, this.pos.y - r, r * 2, r * 2);
-    ctx.fill();
-    ctx.stroke();
+    drawSprite(ctx, ASSETS.towerBase, this.pos.x, this.pos.y, CONFIG.SPRITE_SIZE.towerBase);
+    drawSprite(ctx, ASSETS.towerTurret, this.pos.x, this.pos.y, CONFIG.SPRITE_SIZE.towerTurret, this.aimAngle);
 
+    const labelY = this.pos.y + CONFIG.SPRITE_SIZE.towerBase / 2 + 12;
     ctx.font = 'bold 13px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.lineWidth = 3;
     ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-    ctx.strokeText(`Lv${this.level}`, this.pos.x, this.pos.y);
+    ctx.strokeText(`Lv${this.level}`, this.pos.x, labelY);
     ctx.fillStyle = '#fff';
-    ctx.fillText(`Lv${this.level}`, this.pos.x, this.pos.y);
-    ctx.restore();
+    ctx.fillText(`Lv${this.level}`, this.pos.x, labelY);
   }
 }
 
@@ -366,25 +341,8 @@ class Forge {
   }
 
   draw(ctx) {
-    ctx.save();
-    const r = CONFIG.FORGE.radius;
-    drawShadow(ctx, this.pos.x, this.pos.y, r);
-    ctx.fillStyle = twoStopRadialGradient(
-      ctx,
-      this.pos.x - r * 0.2, this.pos.y - r * 0.3, r * 0.1,
-      this.pos.x, this.pos.y, r * 1.3,
-      shadeColor('#b05c2e', 30), shadeColor('#b05c2e', -30)
-    );
-    ctx.strokeStyle = '#5c2c12';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(this.pos.x, this.pos.y - r);
-    ctx.lineTo(this.pos.x + r, this.pos.y + r);
-    ctx.lineTo(this.pos.x - r, this.pos.y + r);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
+    drawShadow(ctx, this.pos.x, this.pos.y, CONFIG.FORGE.radius);
+    drawSprite(ctx, ASSETS.forge, this.pos.x, this.pos.y, CONFIG.SPRITE_SIZE.forge);
   }
 }
 
@@ -421,22 +379,14 @@ class TownCore {
   }
 
   draw(ctx) {
-    ctx.save();
-    const r = this.radius;
-    drawShadow(ctx, this.pos.x, this.pos.y, r);
-    ctx.fillStyle = radialFill(ctx, this.pos.x, this.pos.y, r * 1.3, '#c9a24d');
-    ctx.strokeStyle = '#7a5a26';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.rect(this.pos.x - r, this.pos.y - r, r * 2, r * 2);
-    ctx.fill();
-    ctx.stroke();
+    drawShadow(ctx, this.pos.x, this.pos.y, this.radius);
+    drawSprite(ctx, ASSETS.townCore, this.pos.x, this.pos.y, CONFIG.SPRITE_SIZE.townCore);
 
-    // world-space HP bar
-    const w = r * 2.5;
+    // world-space HP bar, anchored above the sprite
+    const w = this.radius * 2.5;
     const h = 8;
     const barX = this.pos.x - w / 2;
-    const barY = this.pos.y - r - 22;
+    const barY = this.pos.y - CONFIG.SPRITE_SIZE.townCore / 2 - 18;
     ctx.fillStyle = '#222';
     ctx.fillRect(barX, barY, w, h);
     ctx.fillStyle = this.hp / this.maxHp > 0.3 ? '#4ac26b' : '#e0453a';
@@ -449,6 +399,5 @@ class TownCore {
     ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(`${Math.ceil(this.hp)}/${this.maxHp}`, this.pos.x, barY - 4);
-    ctx.restore();
   }
 }

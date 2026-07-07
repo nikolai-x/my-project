@@ -1,5 +1,5 @@
 // Bootstraps the canvas, wires DOM overlays, and drives the requestAnimationFrame loop.
-(function () {
+(async function () {
   const canvas = document.getElementById('game-canvas');
   canvas.width = CONFIG.CANVAS_WIDTH;
   canvas.height = CONFIG.CANVAS_HEIGHT;
@@ -59,6 +59,8 @@
       game.resume();
     }
   });
+
+  await loadAssets();
 
   let lastTimestamp = 0;
   function frame(timestamp) {

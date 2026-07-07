@@ -31,7 +31,9 @@ const CONFIG = {
   },
 
   FORGE: {
-    pos: { x: 640, y: 300 },
+    // Below the core, clear of the player's spawn point (which sits just above
+    // the core) and clear of the lower tower spots.
+    pos: { x: 640, y: 530 },
     radius: 22,
   },
 
@@ -62,8 +64,8 @@ const CONFIG = {
   },
 
   ENEMY_TYPES: {
-    fast: { hp: 18, speed: 90, damage: 8, attackInterval: 0.8, goldDrop: 4, radius: 10, color: '#e05a2b' },
-    strong: { hp: 70, speed: 40, damage: 22, attackInterval: 1.2, goldDrop: 12, radius: 16, color: '#5a2b6e' },
+    fast: { hp: 18, speed: 90, damage: 8, attackInterval: 0.8, goldDrop: 4, radius: 10, color: '#e05a2b', sprite: 'enemyFast' },
+    strong: { hp: 70, speed: 40, damage: 22, attackInterval: 1.2, goldDrop: 12, radius: 16, color: '#5a2b6e', sprite: 'enemyStrong' },
   },
   ENEMY_SPAWN_WEIGHTS: { fast: 0.65, strong: 0.35 },
 
@@ -75,7 +77,7 @@ const CONFIG = {
   GOLD_SCALE_RATE: 0.001,
   MAX_ACTIVE_ENEMIES: 150,
 
-  GOLD_PICKUP_RADIUS: 30,
+  GOLD_PICKUP_RADIUS: 70,
 
   TOWN_BOUNDS_RADIUS: 260,
 
@@ -85,4 +87,43 @@ const CONFIG = {
     screenShakeDuration: 0.15,
     screenShakeMagnitude: 6,
   },
+
+  // Target size (longest edge, in px) each sprite is scaled to when drawn, via
+  // drawSprite() in utils.js. Chosen independently of gameplay radii so art can
+  // read clearly without changing any collision/hit-test math.
+  SPRITE_SIZE: {
+    player: 60,
+    enemyFast: 40,
+    enemyStrong: 56,
+    towerBase: 64,
+    towerTurret: 40,
+    townCore: 100,
+    forge: 64,
+    goldCoin: 22,
+    projectilePlayer: 28,
+    projectileTower: 30,
+    propRock: 46,
+    propBush: 46,
+    propTree: 60,
+    propFence: 56,
+  },
 };
+
+// Fixed, deterministic decoration layout scattered in the wilderness ring between
+// the town bounds and the enemy spawn ring — purely visual, no collision.
+function buildDecorations() {
+  const types = ['propRock', 'propBush', 'propTree', 'propFence'];
+  const count = 14;
+  const decorations = [];
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2 + 0.2;
+    const radius = 300 + (i % 3) * 45;
+    decorations.push({
+      x: Math.cos(angle) * radius,
+      y: Math.sin(angle) * radius,
+      type: types[i % types.length],
+    });
+  }
+  return decorations;
+}
+CONFIG.DECORATIONS = buildDecorations();

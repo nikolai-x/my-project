@@ -59,6 +59,21 @@ function drawShadow(ctx, x, y, r) {
   ctx.restore();
 }
 
+// Draws `image` centered at (x, y), scaled so its longest edge equals targetSize
+// (preserving aspect ratio), optionally rotated by `angle` radians. Used to render
+// every sprite-based entity without distorting or hand-computing per-image sizes.
+function drawSprite(ctx, image, x, y, targetSize, angle = 0) {
+  if (!image || !image.naturalWidth) return;
+  const scale = targetSize / Math.max(image.naturalWidth, image.naturalHeight);
+  const w = image.naturalWidth * scale;
+  const h = image.naturalHeight * scale;
+  ctx.save();
+  ctx.translate(x, y);
+  if (angle) ctx.rotate(angle);
+  ctx.drawImage(image, -w / 2, -h / 2, w, h);
+  ctx.restore();
+}
+
 function drawRoundedRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);

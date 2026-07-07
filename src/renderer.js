@@ -1,17 +1,33 @@
 // HUD, hover highlight/tooltip, and background rendering (cross-cutting concerns
 // that aren't owned by a single entity).
 
+let stonePattern = null;
+
 function drawBackground(ctx) {
+  if (!stonePattern) stonePattern = ctx.createPattern(ASSETS.tileStone, 'repeat');
+
+  // tile_grass.png is a bordered "tile card," not a seamless texture, so it's
+  // used once per prop area rather than repeated (which would show a grid on
+  // open grassland). tile_stone.png reads fine tiled since a paved town square
+  // is expected to show tile seams.
   ctx.fillStyle = '#3f6b3f';
   ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
 
-  // town bounds indicator
+  // static wilderness props, drawn before the town floor so they read as background
+  for (const decoration of CONFIG.DECORATIONS) {
+    const x = CONFIG.CORE.pos.x + decoration.x;
+    const y = CONFIG.CORE.pos.y + decoration.y;
+    drawSprite(ctx, ASSETS[decoration.type], x, y, CONFIG.SPRITE_SIZE[decoration.type]);
+  }
+
+  // town interior floor
   ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([6, 8]);
   ctx.beginPath();
   ctx.arc(CONFIG.CORE.pos.x, CONFIG.CORE.pos.y, CONFIG.TOWN_BOUNDS_RADIUS, 0, Math.PI * 2);
+  ctx.fillStyle = stonePattern;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.lineWidth = 2;
   ctx.stroke();
   ctx.restore();
 }
